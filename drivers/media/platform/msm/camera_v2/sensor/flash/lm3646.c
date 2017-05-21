@@ -18,11 +18,10 @@
 #define FLASH_NAME "qcom,led-flash"
 
 #define CONFIG_MSMB_CAMERA_DEBUG
-#undef CDBG
 #ifdef CONFIG_MSMB_CAMERA_DEBUG
-#define CDBG(fmt, args...) pr_err(fmt, ##args)
+#define LM3646_DBG(fmt, args...) pr_err(fmt, ##args)
 #else
-#define CDBG(fmt, args...) do { } while (0)
+#define LM3646_DBG(fmt, args...)
 #endif
 
 static struct msm_led_flash_ctrl_t fctrl;
@@ -31,7 +30,6 @@ static struct i2c_driver lm3646_i2c_driver;
 static struct msm_camera_i2c_reg_array lm3646_init_array[] = {
 	{0x04, 0x07},
 	{0x05, 0x7A},
-
 };
 
 static struct msm_camera_i2c_reg_array lm3646_off_array[] = {
@@ -51,38 +49,32 @@ static struct msm_camera_i2c_reg_array lm3646_high_array[] = {
 	{0x01, 0xE3},
 };
 
-static void __exit msm_flash_lm3646_i2c_remove(void)
-{
-	i2c_del_driver(&lm3646_i2c_driver);
-	return;
-}
-
 static const struct of_device_id lm3646_trigger_dt_match[] = {
-	{.compatible = "qcom,led-flash", .data = &fctrl},
+	{.compatible = FLASH_NAME, .data = &fctrl},
 	{}
 };
-
 MODULE_DEVICE_TABLE(of, lm3646_trigger_dt_match);
-
-static const struct i2c_device_id flash_i2c_id[] = {
-	{"qcom,led-flash", (kernel_ulong_t)&fctrl},
-	{ }
-};
 
 static const struct i2c_device_id lm3646_i2c_id[] = {
 	{FLASH_NAME, (kernel_ulong_t)&fctrl},
-	{ }
+	{}
 };
 
 static int msm_flash_lm3646_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	if (!id) {
-		pr_err("msm_flash_lm3646_i2c_probe: id is NULL");
+		LM3646_DBG("%s: id is NULL\n", __func__);
 		id = lm3646_i2c_id;
 	}
 
 	return msm_flash_i2c_probe(client, id);
+}
+
+static void __exit msm_flash_lm3646_i2c_remove(void)
+{
+	i2c_del_driver(&lm3646_i2c_driver);
+	return;
 }
 
 static struct i2c_driver lm3646_i2c_driver = {
@@ -109,7 +101,7 @@ static int msm_flash_lm3646_platform_probe(struct platform_device *pdev)
 static struct platform_driver lm3646_platform_driver = {
 	.probe = msm_flash_lm3646_platform_probe,
 	.driver = {
-		.name = "qcom,led-flash",
+		.name = FLASH_NAME,
 		.owner = THIS_MODULE,
 		.of_match_table = lm3646_trigger_dt_match,
 	},
@@ -119,15 +111,16 @@ static int __init msm_flash_lm3646_init_module(void)
 {
 	int32_t rc = 0;
 
+	LM3646_DBG("%s entry\n", __func__);
 	rc = platform_driver_register(&lm3646_platform_driver);
 	if (!rc)
 		return rc;
-	pr_debug("%s:%d rc %d\n", __func__, __LINE__, rc);
 	return i2c_add_driver(&lm3646_i2c_driver);
 }
 
 static void __exit msm_flash_lm3646_exit_module(void)
 {
+	LM3646_DBG("%s entry\n", __func__);
 	if (fctrl.pdev)
 		platform_driver_unregister(&lm3646_platform_driver);
 	else
@@ -202,7 +195,6 @@ static struct msm_led_flash_ctrl_t fctrl = {
 	.func_tbl = &lm3646_func_tbl,
 };
 
-/*subsys_initcall(msm_flash_i2c_add_driver);*/
 module_init(msm_flash_lm3646_init_module);
 module_exit(msm_flash_lm3646_exit_module);
 MODULE_DESCRIPTION("lm3646 FLASH");
